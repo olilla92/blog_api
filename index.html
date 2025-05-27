@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <title>Blog beküldés</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: 20px auto;
+      padding: 0 15px;
+      background: #f9f9f9;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #333;
+    }
+    form {
+      background: white;
+      padding: 15px;
+      border-radius: 6px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      margin: 8px 0;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #007bff;
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      margin: 5px 5px 5px 0;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    ul#blogList {
+      list-style: none;
+      padding: 0;
+    }
+    ul#blogList li {
+      background: white;
+      padding: 10px 15px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    ul#blogList li span {
+      flex-grow: 1;
+    }
+  </style>
+</head>
+<body>
+  <h1>Új blog</h1>
+  <form id="blogForm">
+    <input type="text" id="szerzo" placeholder="Szerző" />
+    <input type="text" id="cim" placeholder="Cím" />
+    <input type="text" id="kategoria" placeholder="Kategória" />
+    <textarea id="tartalom" placeholder="Tartalom"></textarea>
+    <button type="submit">Hozzáadás</button>
+  </form>
+
+  <h2>Blogok listája</h2>
+  <ul id="blogList"></ul>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    const blogList = document.getElementById('blogList');
+    const blogForm = document.getElementById('blogForm');
+
+    function loadBlogs() {
+      axios.get('/blogok')
+        .then(res => {
+          blogList.innerHTML = '';
+          res.data.forEach(blog => {
+            const li = document.createElement('li');
+            const blogSpan = document.createElement('span');
+            blogSpan.textContent = `${blog.cim} - ${blog.szerzo}`;
+
+            const getBtn = document.createElement('button');
+            getBtn.textContent = 'Megnézés';
+            getBtn.onclick = () => {
+              axios.get('/blogok/' + blog.id)
+                .then(res => alert(JSON.stringify(res.data, null, 2)))
+                .catch(err => alert('Hiba: ' + err));
+            };
+
+            const updateBtn = document.createElement('button');
+            updateBtn.textContent = 'Szerkesztés';
+            updateBtn.onclick = () => {
+              const szerzo = prompt('Új szerző:', blog.szerzo);
+              const cim = prompt('Új cím:', blog.cim);
+              const kategoria = prompt('Új kategória:', blog.kategoria);
+              const tartalom = prompt('Új tartalom:', blog.tartalom);
+              if (szerzo && cim && kategoria && tartalom) {
+                axios.put('/blogok/' + blog.id, { szerzo, cim, kategoria, tartalom })
+                  .then(() => {
+                    alert('Sikeres frissítés');
+                    loadBlogs();
+                  })
+                  .catch(err => alert('Hiba: ' + err));
+              }
+            };
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Törlés';
+            deleteBtn.onclick = () => {
+              if (confirm('Biztos törlöd ezt a blogot?')) {
+                axios.delete('/blogok/' + blog.id)
+                  .then(() => {
+                    alert('Törlés sikeres');
+                    loadBlogs();
+                  })
+                  .catch(err => alert('Hiba: ' + err));
+              }
+            };
+
+            li.appendChild(blogSpan);
+            li.appendChild(getBtn);
+            li.appendChild(updateBtn);
+            li.appendChild(deleteBtn);
+            blogList.appendChild(li);
+          });
+        })
+        .catch(err => console.error('Hiba blogok betöltésekor:', err));
+    }
+
+    blogForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const szerzo = document.getElementById('szerzo').value.trim();
+      const cim = document.getElementById('cim').value.trim();
+      const kategoria = document.getElementById('kategoria').value.trim();
+      const tartalom = document.getElementById('tartalom').value.trim();
+
+      if (!szerzo || !cim || !kategoria || !tartalom) {
+        alert('Kérlek, tölts ki minden mezőt!');
+        return;
+      }
+
+      axios.post('/blogok', { szerzo, cim, kategoria, tartalom })
+        .then(() => {
+          alert('Blog hozzáadva!');
+          blogForm.reset();
+          loadBlogs();
+        })
+        .catch(error => {
+          alert('Hiba történt a blog hozzáadásakor.');
+          console.error(error);
+        });
+    });
+    loadBlogs();
+  </script>
+</body>
+</html>
